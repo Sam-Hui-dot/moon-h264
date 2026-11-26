@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>moon-h264 — Pure MoonBit H.264/AVC Decoder &amp; Macroblock Inspector</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --panel: #111827;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent2: #10b981;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: #0f172a;
+    }
+    header h1 { margin: 0; font-size: 18px; letter-spacing: 0.3px; }
+    header .sub { color: var(--muted); font-size: 13px; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #1e293b;
+      color: var(--accent);
+      margin-left: 8px;
+    }
+    main {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 18px 20px 36px;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 960px) { main { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+    }
+    .preset-btn {
+      width: 100%;
+      text-align: left;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 11px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .preset-btn:hover, .preset-btn.active { border-color: var(--accent); background: #172554; }
+    .preset-btn .pt { font-weight: 600; font-size: 13px; display: flex; justify-content: space-between; }
+    .preset-btn .pd { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .dropzone {
+      border: 1px dashed #475569;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .dropzone.drag { border-color: var(--accent2); color: var(--accent2); }
+    .stage-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .canvas-box {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      min-height: 280px;
+    }
+    canvas {
+      image-rendering: pixelated;
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      cursor: crosshair;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    button.ctrl, select.ctrl {
+      background: #1e293b;
+      color: var(--text);
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 6px 11px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    button.ctrl:hover { border-color: var(--accent); }
+    button.ctrl.primary { background: #0284c7; border-color: #0284c7; color: #fff; }
+    label.chk {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: #cbd5e1;
+      cursor: pointer;
+      user-select: none;
+    }
+    input[type="range"] { flex: 1; min-width: 140px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+    .kv-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .kv {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+    }
+    .kv .k { font-size: 11px; color: var(--muted); }
+    .kv .v { font-size: 13px; font-weight: 600; margin-top: 2px; }
+    .svg-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 1100px) { .svg-row { grid-template-columns: 1fr; } }
+    .svg-box { overflow-x: auto; }
+    .svg-box svg { max-width: 100%; height: auto; display: block; }
+    pre.probe {
+      margin: 0;
+      padding: 10px;
+      background: #020617;
+      border-radius: 6px;
+      overflow-x: auto;
+      max-height: 220px;
+      color: #cbd5e1;
+    }
+    .legend-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>moon-h264 <span class="badge">v0.1.0 Constrained Baseline</span></h1>
+      <div class="sub">100% client-side pure-MoonBit H.264/AVC decoder &amp; white-box macroblock/MV anatomy workbench (zero upload)</div>
+    </div>
+    <div class="sub mono" id="statusLine">Initializing MoonBit decoder...</div>
+  </header>
+
+  <main>
+    <aside class="stage-wrap">
+      <div class="card">
+        <h2>Built-in Real H.264 Streams</h2>
+        <div id="presetList"></div>
+        <div class="dropzone" id="dropzone">
+          Drop any Annex B <code>.h264</code> Baseline file here<br />or click to select (decoded locally)
+          <input type="file" id="fileInput" accept=".h264,.264,.avc" hidden />
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Hovered Macroblock</h2>
+        <div id="mbHover" class="mono" style="color:#94a3b8;">Move pointer over video canvas to inspect MB type, QP, bits, and motion vector.</div>
+      </div>
+
+      <div class="card">
+        <h2>NALU &amp; SPS/PPS Probe</h2>
+        <pre id="probeOut" class="probe mono"></pre>
+      </div>
+    </aside>
+
+    <section class="stage-wrap">
+      <div class="card">
+        <div class="controls">
+          <button class="ctrl primary" id="btnPlay">Play</button>
+          <button class="ctrl" id="btnPrev">Prev</button>
+          <button class="ctrl" id="btnNext">Next</button>
+          <input type="range" id="scrubber" min="0" max="0" value="0" />
+          <span class="mono" id="frameCounter">0 / 0</span>
+        </div>
+        <div class="controls" style="margin-top:8px;">
+          <select class="ctrl" id="viewMode">
+            <option value="rgb">Color (RGB)</option>
+            <option value="y">Luma (Y plane)</option>
+            <option value="u">Chroma Cb (U plane)</option>
+            <option value="v">Chroma Cr (V plane)</option>
+          </select>
+          <label class="chk"><input type="checkbox" id="chkGrid" checked /> MB Type Grid</label>
+          <label class="chk"><input type="checkbox" id="chkMv" checked /> Motion Vectors (L0)</label>
+          <label class="chk"><input type="checkbox" id="chkQp" /> QP Overlay</label>
+        </div>
+
+        <div class="canvas-box" style="margin-top:12px;">
+          <canvas id="videoCanvas" width="320" height="240"></canvas>
+        </div>
+
+        <div class="legend-bar" style="margin-top:10px;">
+          <span><span class="swatch" style="background:#ef4444"></span>I_4x4</span>
+          <span><span class="swatch" style="background:#f97316"></span>I_16x16</span>
+          <span><span class="swatch" style="background:#2563eb"></span>P_16x16</span>
+          <span><span class="swatch" style="background:#0ea5e9"></span>P_16x8 / P_8x16</span>
+          <span><span class="swatch" style="background:#10b981"></span>P_8x8</span>
+          <span><span class="swatch" style="background:#475569"></span>P_Skip</span>
+        </div>
+
+        <div class="kv-grid mono" id="frameStats"></div>
+      </div>
+
+      <div class="svg-row">
+        <div class="card svg-box">
+          <h2>Native SVG Macroblock &amp; MV Map</h2>
+          <div id="mbSvgBox"></div>
+        </div>
+        <div class="card svg-box">
+          <h2>Native SVG Frame Bitrate Distribution</h2>
+          <div id="bitrateSvgBox"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="./moon-h264.js"></script>
+  <script src="./samples.js"></script>
+  <script>
+    const MB_COLORS = {
+      I_4x4: "rgba(239,68,68,0.34)",
+      I_16x16: "rgba(249,115,22,0.34)",
+      I_PCM: "rgba(236,72,153,0.40)",
+      P_16x16: "rgba(37,99,235,0.28)",
+      P_16x8: "rgba(14,165,233,0.32)",
+      P_8x16: "rgba(6,182,212,0.32)",
+      P_8x8: "rgba(16,185,129,0.34)",
+      P_Skip: "rgba(71,85,105,0.18)",
+    };
+
+    let currentResult = null;
+    let currentFrame = 0;
+    let timer = null;
+    let scale = 3;
+
+    const canvas = document.getElementById("videoCanvas");
+    const ctx = canvas.getContext("2d");
+    const scrubber = document.getElementById("scrubber");
+    const frameCounter = document.getElementById("frameCounter");
+    const statusLine = document.getElementById("statusLine");
+    const probeOut = document.getElementById("probeOut");
+    const frameStats = document.getElementById("frameStats");
+    const mbSvgBox = document.getElementById("mbSvgBox");
+    const bitrateSvgBox = document.getElementById("bitrateSvgBox");
+    const mbHover = document.getElementById("mbHover");
+
+    function renderFrame(idx) {
+      if (!currentResult || !currentResult.frames.length) return;
+      currentFrame = (idx + currentResult.frames.length) % currentResult.frames.length;
+      const f = currentResult.frames[currentFrame];
+      scale = f.width <= 160 ? 4 : f.width <= 240 ? 3 : 2;
+      canvas.width = f.width * scale;
+      canvas.height = f.height * scale;
+
+      const off = document.createElement("canvas");
+      off.width = f.width;
+      off.height = f.height;
+      const octx = off.getContext("2d");
+      const img = octx.createImageData(f.width, f.height);
+      const mode = document.getElementById("viewMode").value;
+      if (mode === "rgb") {
+        img.data.set(f.rgba);
+      } else if (mode === "y") {
+        for (let i = 0; i < f.y.length; i++) {
+          const v = f.y[i];
+          img.data[i * 4] = v;
+          img.data[i * 4 + 1] = v;
+          img.data[i * 4 + 2] = v;
+          img.data[i * 4 + 3] = 255;
+        }
+      } else {
+        const plane = mode === "u" ? f.u : f.v;
+        const cw = (f.width + 1) >> 1;
+        for (let y = 0; y < f.height; y++) {
+          for (let x = 0; x < f.width; x++) {
+            const v = plane[(y >> 1) * cw + (x >> 1)];
+            const p = (y * f.width + x) * 4;
+            img.data[p] = v;
+            img.data[p + 1] = v;
+            img.data[p + 2] = v;
+            img.data[p + 3] = 255;
+          }
+        }
+      }
+      octx.putImageData(img, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
+
+      const showGrid = document.getElementById("chkGrid").checked;
+      const showMv = document.getElementById("chkMv").checked;
+      const showQp = document.getElementById("chkQp").checked;
+      const cell = 16 * scale;
+
+      if (showGrid || showMv || showQp) {
+        for (const mb of f.mbs) {
+          const x = mb.x * cell;
+          const y = mb.y * cell;
+          if (showGrid) {
+            ctx.fillStyle = MB_COLORS[mb.kind] || "rgba(255,255,255,0.1)";
+            ctx.fillRect(x, y, cell, cell);
+            ctx.strokeStyle = "rgba(15,23,42,0.55)";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x + 0.5, y + 0.5, cell - 1, cell - 1);
+          }
+          if (showMv && (mb.mvx !== 0 || mb.mvy !== 0)) {
+            const cx = x + cell / 2;
+            const cy = y + cell / 2;
+            const ex = cx + (mb.mvx / 4) * scale;
+            const ey = cy + (mb.mvy / 4) * scale;
+            ctx.strokeStyle = "#fde047";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(ex, ey);
+            ctx.stroke();
+            ctx.fillStyle = "#fef08a";
+            ctx.beginPath();
+            ctx.arc(ex, ey, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          if (showQp) {
+            ctx.fillStyle = "#f8fafc";
+            ctx.font = "10px monospace";
+            ctx.fillText(String(mb.qp), x + 3, y + 11);
+          }
+        }
+      }
+
+      scrubber.value = String(currentFrame);
+      frameCounter.textContent = `${currentFrame + 1} / ${currentResult.frames.length}`;
+      mbSvgBox.innerHTML = f.mb_svg;
+
+      const counts = {};
+      for (const mb of f.mbs) counts[mb.kind] = (counts[mb.kind] || 0) + 1;
+      frameStats.innerHTML = [
+        ["Frame", `#${f.index} (${f.slice_type}${f.is_idr ? " / IDR" : ""})`],
+        ["Resolution", `${f.width}x${f.height} (${f.mb_w}x${f.mb_h} MBs)`],
+        ["Slice QP", `${f.slice_qp}`],
+        ["NAL Size", `${f.nal_bytes} B`],
+        ["Intra MBs", `${(counts.I_4x4 || 0) + (counts.I_16x16 || 0) + (counts.I_PCM || 0)}`],
+        ["P_Skip MBs", `${counts.P_Skip || 0}`],
+      ].map(([k, v]) => `<div class="kv"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+    }
+
+    function loadDecoded(res, label, elapsedMs) {
+      if (!res.ok) {
+        statusLine.textContent = `Decode error: ${res.error}`;
+        return;
+      }
+      currentResult = res;
+      stopPlay();
+      scrubber.max = String(Math.max(0, res.frames.length - 1));
+      probeOut.textContent = res.probe_text;
+      bitrateSvgBox.innerHTML = res.bitrate_svg;
+      statusLine.textContent = `Decoded ${label}: ${res.frames.length} frames in ${elapsedMs.toFixed(1)} ms`;
+      renderFrame(0);
+    }
+
+    function loadPreset(sample, btnEl) {
+      document.querySelectorAll(".preset-btn").forEach((b) => b.classList.remove("active"));
+      if (btnEl) btnEl.classList.add("active");
+      const t0 = performance.now();
+      const res = globalThis.MoonH264.decodeHex(sample.hex);
+      loadDecoded(res, sample.id, performance.now() - t0);
+    }
+
+    function stopPlay() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+      document.getElementById("btnPlay").textContent = "Play";
+    }
+
+    document.getElementById("btnPlay").onclick = () => {
+      if (timer) {
+        stopPlay();
+      } else {
+        document.getElementById("btnPlay").textContent = "Pause";
+        timer = setInterval(() => renderFrame(currentFrame + 1), 160);
+      }
+    };
+    document.getElementById("btnPrev").onclick = () => { stopPlay(); renderFrame(currentFrame - 1); };
+    document.getElementById("btnNext").onclick = () => { stopPlay(); renderFrame(currentFrame + 1); };
+    scrubber.oninput = () => { stopPlay(); renderFrame(Number(scrubber.value)); };
+    ["viewMode", "chkGrid", "chkMv", "chkQp"].forEach((id) => {
+      document.getElementById(id).onchange = () => renderFrame(currentFrame);
+    });
+
+    canvas.addEventListener("mousemove", (ev) => {
+      if (!currentResult || !currentResult.frames.length) return;
+      const f = currentResult.frames[currentFrame];
+      const rect = canvas.getBoundingClientRect();
+      const mx = Math.floor(((ev.clientX - rect.left) / rect.width) * f.width / 16);
+      const my = Math.floor(((ev.clientY - rect.top) / rect.height) * f.height / 16);
+      const mb = f.mbs.find((m) => m.x === mx && m.y === my);
+      if (mb) {
+        mbHover.textContent = `MB(${mb.x}, ${mb.y})  kind=${mb.kind}  QP=${mb.qp}  bits=${mb.bits}  MV=(${(mb.mvx/4).toFixed(2)}, ${(mb.mvy/4).toFixed(2)}) px  intra_mode=${mb.imode}`;
+      }
+    });
+
+    const dz = document.getElementById("dropzone");
+    const fi = document.getElementById("fileInput");
+    dz.onclick = () => fi.click();
+    dz.ondragover = (e) => { e.preventDefault(); dz.classList.add("drag"); };
+    dz.ondragleave = () => dz.classList.remove("drag");
+    dz.ondrop = (e) => {
+      e.preventDefault();
+      dz.classList.remove("drag");
+      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    };
+    fi.onchange = () => { if (fi.files[0]) handleFile(fi.files[0]); };
+
+    function handleFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const u8 = new Uint8Array(reader.result);
+        const t0 = performance.now();
+        const res = globalThis.MoonH264.decodeBytes(u8);
+        loadDecoded(res, file.name, performance.now() - t0);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Populate presets
+    const listEl = document.getElementById("presetList");
+    (globalThis.MOON_H264_SAMPLES || []).forEach((s, i) => {
+      const btn = document.createElement("button");
+      btn.className = "preset-btn";
+      btn.innerHTML = `<div class="pt"><span>${s.title}</span><span class="badge">${s.tag}</span></div><div class="pd">${s.description} (${s.size_bytes} B)</div>`;
+      btn.onclick = () => loadPreset(s, btn);
+      listEl.appendChild(btn);
+      if (i === 0) loadPreset(s, btn);
+    });
+  </script>
+</body>
+</html>
