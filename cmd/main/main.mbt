@@ -24,13 +24,7 @@ async fn cmd_decode(args : Array[String]) -> Unit {
   guard out_path.length() > 0 else { abort("missing --out <OUTPUT.yuv>") }
   let raw = @fs.read_file(in_path).binary()
   let res = @moon-h264.decode_annexb(raw)
-  let total_bytes = if res.frames.length() > 0 {
-    let f0 = res.frames[0]
-    (f0.y.length() + f0.u.length() + f0.v.length()) * res.frames.length()
-  } else {
-    0
-  }
-  let buf = Buffer(size_hint=total_bytes)
+  let buf = Buffer()
   for f in res.frames {
     buf.write_bytesview(f.y[:])
     buf.write_bytesview(f.u[:])

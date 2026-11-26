@@ -32,7 +32,7 @@ pub fn nal_unit_type_name(nal_type : Int32) -> String {
 /// Remove Emulation Prevention Bytes (`0x00 0x00 0x03`) from a raw NALU body (excluding header byte)
 /// to produce the Raw Byte Sequence Payload (RBSP).
 pub fn ebsp_to_rbsp(data : Bytes, start : Int32, end_ : Int32) -> Bytes {
-  let buf = Buffer(size_hint=end_ - start)
+  let buf = Buffer()
   let mut i = start
   let mut zeros = 0
   while i < end_ {

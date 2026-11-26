@@ -3256,7 +3256,7 @@ function _M0MP215Sam_2dHui_2ddot11moon_2dh2646MbKind5label(self) {
   }
 }
 function _M0FP215Sam_2dHui_2ddot11moon_2dh26414ebsp__to__rbsp(data, start, end_) {
-  const buf = _M0MPC16buffer6Buffer14Buffer_2einner(end_ - start | 0);
+  const buf = _M0MPC16buffer6Buffer14Buffer_2einner(0);
   let i = start;
   let zeros = 0;
   while (true) {
@@ -9546,7 +9546,7 @@ function _M0FP315Sam_2dHui_2ddot11moon_2dh2643web9json__err(err) {
   return _M0MPC14json4Json17stringify_2einner(new _M0DTPC14json4Json6Object(_p$2), false, 0, undefined);
 }
 function _M0FP315Sam_2dHui_2ddot11moon_2dh2643web14bytes__to__hex(data) {
-  const sb = _M0MPB13StringBuilder21StringBuilder_2einner(Math.imul(data.length, 2) | 0);
+  const sb = _M0MPB13StringBuilder21StringBuilder_2einner(8);
   let _tmp = 0;
   while (true) {
     const i = _tmp;

@@ -69,9 +69,7 @@ pub struct DecodedFrame {
 ///|
 /// Return the raw contiguous YUV420p byte buffer (`Y + U + V`), bit-exact with FFmpeg `-pix_fmt yuv420p`.
 pub fn DecodedFrame::to_yuv420p_bytes(self : DecodedFrame) -> Bytes {
-  let buf = Buffer(
-    size_hint=self.y.length() + self.u.length() + self.v.length(),
-  )
+  let buf = Buffer()
   buf.write_bytesview(self.y[:])
   buf.write_bytesview(self.u[:])
   buf.write_bytesview(self.v[:])

@@ -9,7 +9,7 @@ fn json_err(err : Error) -> String {
 ///|
 fn bytes_to_hex(data : Bytes) -> String {
   let hex = "0123456789abcdef"
-  let sb = StringBuilder(size_hint=data.length() * 2)
+  let sb = StringBuilder()
   for i = 0; i < data.length(); i = i + 1 {
     let b = data[i].to_int()
     sb.write_char(hex[(b >> 4) & 15].to_int().unsafe_to_char())
