@@ -1,0 +1,6 @@
+_build/
+.mooncakes/
+demo/out/
+*.yuv
+*.h264
+!docs/samples.js
