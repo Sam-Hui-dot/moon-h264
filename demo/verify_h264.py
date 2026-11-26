@@ -92,11 +92,12 @@ VECTORS = [
 
 
 def find_cli() -> Path:
-    exe = "main.exe" if os.name == "nt" else "main"
-    p = ROOT / "_build" / "native" / "release" / "build" / "cmd" / "main" / exe
-    if not p.exists():
-        raise FileNotFoundError(f"Native CLI not found: {p}")
-    return p
+    base = ROOT / "_build" / "native" / "release" / "build" / "cmd" / "main"
+    for name in ("main.exe", "main"):
+        p = base / name
+        if p.exists():
+            return p
+    raise FileNotFoundError(f"Native CLI not found in {base}")
 
 
 def sha256_bytes(b: bytes) -> str:
