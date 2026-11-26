@@ -106,15 +106,10 @@ async fn cmd_inspect(args : Array[String]) -> Unit {
 }
 
 ///|
-async fn main {
-  let all_args = @env.args()
-  let args : Array[String] = []
-  for i = 1; i < all_args.length(); i = i + 1 {
-    args.push(all_args[i])
-  }
+async fn run_cli(args : Array[String]) -> Int32 {
   if args.length() == 0 {
     println(usage)
-    return
+    return 0
   }
   match args[0] {
     "decode" => cmd_decode(args)
@@ -122,7 +117,33 @@ async fn main {
     "inspect" => cmd_inspect(args)
     _ => {
       println(usage)
-      abort("unknown subcommand: \{args[0]}")
+      return 2
     }
+  }
+  0
+}
+
+///|
+async fn main {
+  let all_args = @env.args()
+  let args : Array[String] = []
+  for i = 1; i < all_args.length(); i = i + 1 {
+    args.push(all_args[i])
+  }
+  let code = match
+    (@async.with_timeout_opt(120_000, () => run_cli(args)) catch {
+      err => {
+        println(@moon-h264.error_message(err))
+        Some(1)
+      }
+    }) {
+    Some(c) => c
+    None => {
+      println("operation timed out after 120s")
+      2
+    }
+  }
+  if code != 0 {
+    @env.exit(code)
   }
 }
