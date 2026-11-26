@@ -1,0 +1,85 @@
+name: CI
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MOON_WORK: 'off'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Ensure FFmpeg is installed
+        run: |
+          command -v ffmpeg || (sudo apt-get update && sudo apt-get install -y ffmpeg)
+          ffmpeg -version | head -n 2
+      - name: Install MoonBit toolchain
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+      - name: Format, multi-target check, unit tests, and CLI builds
+        run: |
+          moon version --all
+          moon update
+          moon fmt --check
+          for target in wasm wasm-gc js native; do
+            echo "=== target: $target ==="
+            moon check --target "$target" --deny-warn
+            moon test --target "$target" --deny-warn
+          done
+          moon build --target wasm --deny-warn cmd/main
+          moon build --target native --release --deny-warn cmd/main
+      - name: Verify root library from an independent consumer module
+        run: |
+          WS="$RUNNER_TEMP/moon-h264-consumer"
+          mkdir -p "$WS/library" "$WS/consumer"
+          cp moon.mod moon.pkg bitstream.mbt nalu.mbt headers.mbt cavlc.mbt transform.mbt intra.mbt inter.mbt deblock.mbt color.mbt decoder.mbt viz.mbt report.mbt "$WS/library/"
+          printf 'members = ["library", "consumer"]\n' > "$WS/moon.work"
+          cat > "$WS/consumer/moon.mod" << 'EOF'
+          name = "consumer/h264-check"
+          version = "0.1.0"
+
+          import {
+            "Sam-Hui-dot/moon-h264@0.1.0",
+          }
+          EOF
+          cat > "$WS/consumer/moon.pkg" << 'EOF'
+          import {
+            "Sam-Hui-dot/moon-h264" @h264,
+          }
+          pkgtype(kind: "executable")
+          EOF
+          cat > "$WS/consumer/main.mbt" << 'EOF'
+          fn main raise {
+            guard @h264.verify_cavlc_tables_integrity() else {
+              abort("cavlc table integrity failed")
+            }
+            let avcc : Bytes = [b'\x00', b'\x00', b'\x00', b'\x03', b'\x67', b'\x42', b'\xC0']
+            let nalus = @h264.extract_avcc_nalus(avcc)
+            guard nalus.length() == 1 && nalus[0].nal_unit_type == 7 else {
+              abort("unexpected avcc nalu")
+            }
+            println("consumer: ok")
+          }
+          EOF
+          MOON_WORK="" moon -C "$WS/consumer" run --target js --deny-warn .
+          MOON_WORK="" moon -C "$WS/consumer" run --target wasm --deny-warn .
+      - name: Build and smoke-test zero-upload browser workbench
+        run: |
+          python3 demo/build_web.py
+      - name: Differential oracle against FFmpeg (13 libx264 Constrained Baseline streams)
+        run: |
+          python3 demo/verify_h264.py
+          cat demo/out/h264-oracle-summary.md >> "$GITHUB_STEP_SUMMARY"

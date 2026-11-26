@@ -1,0 +1,270 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Sam-Hui-dot/moon-h264"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn chroma_qp_from_luma(Int32, Int32) -> Int32
+
+pub fn deblock_frame(FixedArray[Byte], FixedArray[Byte], FixedArray[Byte], Int32, Int32, FixedArray[Bool], FixedArray[Int32], FixedArray[Int32], FixedArray[Int32], FixedArray[Int32], FixedArray[Int32], Int32, FixedArray[Int32], FixedArray[Int32], FixedArray[Int32], FixedArray[Int32]) -> Unit
+
+pub fn decode_annexb(Bytes) -> DecodeResult raise H264Error
+
+pub fn decode_cavlc_block(BitReader, FixedArray[Int32], Int32, Int32, Int32) -> Int32 raise H264Error
+
+pub fn decode_coeff_token(BitReader, Int32) -> (Int32, Int32) raise H264Error
+
+pub fn dequant_4x4(FixedArray[Int32], Int32, Bool) -> Unit
+
+pub fn ebsp_to_rbsp(Bytes, Int32, Int32) -> Bytes
+
+pub fn error_message(Error) -> String
+
+pub fn extract_annexb_nalus(Bytes) -> Array[NalUnit]
+
+pub fn extract_avcc_nalus(Bytes, length_size? : Int32) -> Array[NalUnit] raise H264Error
+
+pub fn idct_4x4_add(FixedArray[Int32], FixedArray[Byte], Int32, Int32, Int32) -> Unit
+
+pub fn idct_4x4_dc_add(Int32, FixedArray[Byte], Int32, Int32, Int32) -> Unit
+
+pub fn inverse_hadamard_chroma_dc(FixedArray[Int32], Int32) -> FixedArray[Int32]
+
+pub fn inverse_hadamard_luma_dc(FixedArray[Int32], Int32) -> FixedArray[Int32]
+
+pub fn mc_chroma_block(FixedArray[Byte], FixedArray[Byte], Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32) -> Unit
+
+pub fn mc_luma_block(FixedArray[Byte], FixedArray[Byte], Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32) -> Unit
+
+pub fn nal_unit_type_name(Int32) -> String
+
+pub fn parse_pps(Bytes) -> Pps raise H264Error
+
+pub fn parse_slice_header(BitReader, Int32, Int32, Map[Int32, Sps], Map[Int32, Pps]) -> (SliceHeader, Sps, Pps) raise H264Error
+
+pub fn parse_sps(Bytes) -> Sps raise H264Error
+
+pub fn predict_intra_16x16(FixedArray[Byte], Int32, Int32, Int32, Int32, Bool, Bool) -> Unit
+
+pub fn predict_intra_4x4(FixedArray[Byte], Int32, Int32, Int32, Int32, Bool, Bool, Bool, Bool) -> Unit
+
+pub fn predict_intra_chroma_8x8(FixedArray[Byte], Int32, Int32, Int32, Int32, Bool, Bool) -> Unit
+
+pub fn predict_mv_l0(FixedArray[Int32], FixedArray[Int32], FixedArray[Int32], FixedArray[Int32], Int32, Int32, Int32, Int32, Int32, Int32, Int32) -> (Int32, Int32)
+
+pub fn render_bitrate_svg(Array[DecodedFrame]) -> String
+
+pub fn render_frame_mb_svg(FrameMeta) -> String
+
+pub fn render_probe_json(DecodeResult) -> String
+
+pub fn render_probe_text(DecodeResult) -> String
+
+pub fn verify_cavlc_tables_integrity() -> Bool
+
+pub fn yuv420p_to_rgba(Bytes, Bytes, Bytes, Int32, Int32, bt709? : Bool) -> Bytes
+
+pub let zigzag_4x4 : FixedArray[Int32]
+
+// Errors
+#derive(Eq, @debug.Debug)
+pub(all) suberror H264Error {
+  UnexpectedEof(String)
+  InvalidSyntax(String)
+  UnsupportedProfile(String)
+  UnsupportedFeature(String)
+  MissingParameterSet(String)
+}
+pub fn H264Error::equal(Self, Self) -> Bool
+pub fn H264Error::not_equal(Self, Self) -> Bool
+pub fn H264Error::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub struct BitReader {
+  data : Bytes
+  mut bit_pos : Int32
+  total_bits : Int32
+  stop_bit_pos : Int32
+}
+pub fn BitReader::align_to_byte(Self) -> Unit
+pub fn BitReader::is_byte_aligned(Self) -> Bool
+pub fn BitReader::more_rbsp_data(Self) -> Bool
+pub fn BitReader::new(Bytes) -> Self
+pub fn BitReader::peek_bits(Self, Int32) -> Int32
+pub fn BitReader::position(Self) -> Int32
+pub fn BitReader::read_aligned_byte(Self) -> Int32 raise H264Error
+pub fn BitReader::read_bit(Self) -> Int32 raise H264Error
+pub fn BitReader::read_bits(Self, Int32) -> Int32 raise H264Error
+pub fn BitReader::read_me(Self, Bool) -> Int32 raise H264Error
+pub fn BitReader::read_se(Self) -> Int32 raise H264Error
+pub fn BitReader::read_te(Self, Int32) -> Int32 raise H264Error
+pub fn BitReader::read_ue(Self) -> Int32 raise H264Error
+pub fn BitReader::remaining_bits(Self) -> Int32
+pub fn BitReader::skip_bits(Self, Int32) -> Unit raise H264Error
+
+pub struct DecodeResult {
+  nalus : Array[NalUnit]
+  sps_list : Array[Sps]
+  pps_list : Array[Pps]
+  frames : Array[DecodedFrame]
+}
+
+pub struct DecodedFrame {
+  width : Int32
+  height : Int32
+  y : Bytes
+  u : Bytes
+  v : Bytes
+  matrix_coefficients : Int32
+  meta : FrameMeta
+}
+pub fn DecodedFrame::to_rgba(Self) -> Bytes
+pub fn DecodedFrame::to_yuv420p_bytes(Self) -> Bytes
+
+pub struct FrameMeta {
+  frame_index : Int32
+  frame_num : Int32
+  is_idr : Bool
+  slice_type : String
+  width : Int32
+  height : Int32
+  mb_w : Int32
+  mb_h : Int32
+  slice_qp : Int32
+  nal_bytes : Int32
+  mbs : Array[MbMeta]
+}
+
+pub struct H264Decoder {
+  sps_map : Map[Int32, Sps]
+  pps_map : Map[Int32, Pps]
+  mut next_pic_id : Int32
+  mut frame_count : Int32
+  mut slice_counter : Int32
+  // private fields
+}
+pub fn H264Decoder::flush(Self) -> DecodedFrame?
+pub fn H264Decoder::new() -> Self
+pub fn H264Decoder::push_nalu(Self, NalUnit) -> DecodedFrame? raise H264Error
+
+pub enum MbKind {
+  I4x4
+  I16x16
+  IPcm
+  PSkip
+  P16x16
+  P16x8
+  P8x16
+  P8x8
+}
+pub fn MbKind::label(Self) -> String
+
+pub struct MbMeta {
+  mb_x : Int32
+  mb_y : Int32
+  kind : MbKind
+  qp : Int32
+  bits : Int32
+  mv_x : Int32
+  mv_y : Int32
+  intra_mode : Int32
+}
+
+pub struct MmcoOp {
+  op : Int32
+  arg1 : Int32
+  arg2 : Int32
+}
+
+pub struct NalUnit {
+  nal_ref_idc : Int32
+  nal_unit_type : Int32
+  byte_offset : Int32
+  raw_size : Int32
+  rbsp : Bytes
+}
+
+pub struct Pps {
+  pps_id : Int32
+  sps_id : Int32
+  entropy_coding_mode_flag : Bool
+  bottom_field_pic_order_in_frame_present_flag : Bool
+  num_slice_groups_minus1 : Int32
+  num_ref_idx_l0_default_active_minus1 : Int32
+  num_ref_idx_l1_default_active_minus1 : Int32
+  weighted_pred_flag : Bool
+  weighted_bipred_idc : Int32
+  pic_init_qp_minus26 : Int32
+  pic_init_qs_minus26 : Int32
+  chroma_qp_index_offset : Int32
+  deblocking_filter_control_present_flag : Bool
+  constrained_intra_pred_flag : Bool
+  redundant_pic_cnt_present_flag : Bool
+}
+
+pub struct RefPicListMod {
+  idc : Int32
+  value : Int32
+}
+
+pub struct SliceHeader {
+  first_mb_in_slice : Int32
+  slice_type : Int32
+  pps_id : Int32
+  frame_num : Int32
+  is_idr : Bool
+  nal_ref_idc : Int32
+  idr_pic_id : Int32
+  pic_order_cnt_lsb : Int32
+  delta_pic_order_cnt_0 : Int32
+  delta_pic_order_cnt_1 : Int32
+  num_ref_idx_l0_active : Int32
+  ref_pic_list_mods_l0 : Array[RefPicListMod]
+  no_output_of_prior_pics_flag : Bool
+  long_term_reference_flag : Bool
+  adaptive_ref_pic_marking_mode_flag : Bool
+  mmco_ops : Array[MmcoOp]
+  slice_qp_y : Int32
+  disable_deblocking_filter_idc : Int32
+  slice_alpha_c0_offset_div2 : Int32
+  slice_beta_offset_div2 : Int32
+}
+pub fn SliceHeader::is_i_slice(Self) -> Bool
+pub fn SliceHeader::is_p_slice(Self) -> Bool
+
+pub struct Sps {
+  sps_id : Int32
+  profile_idc : Int32
+  constraint_set_flags : Int32
+  level_idc : Int32
+  chroma_format_idc : Int32
+  bit_depth_luma : Int32
+  bit_depth_chroma : Int32
+  log2_max_frame_num : Int32
+  pic_order_cnt_type : Int32
+  log2_max_pic_order_cnt_lsb : Int32
+  delta_pic_order_always_zero_flag : Bool
+  offset_for_non_ref_pic : Int32
+  offset_for_top_to_bottom_field : Int32
+  offset_for_ref_frame : Array[Int32]
+  max_num_ref_frames : Int32
+  gaps_in_frame_num_allowed : Bool
+  pic_width_in_mbs : Int32
+  pic_height_in_mbs : Int32
+  frame_mbs_only_flag : Bool
+  direct_8x8_inference_flag : Bool
+  frame_cropping_flag : Bool
+  crop_left : Int32
+  crop_right : Int32
+  crop_top : Int32
+  crop_bottom : Int32
+  matrix_coefficients : Int32
+}
+pub fn Sps::height(Self) -> Int32
+pub fn Sps::width(Self) -> Int32
+
+// Type aliases
+
+// Traits
